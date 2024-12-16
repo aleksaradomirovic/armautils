@@ -312,7 +312,7 @@ static struct pbo_entry * create_pbo_entry_file(char * path, const struct stat *
 
     ent->type = PBO_ENTRY_TYPE_NULL;
     ent->original_size = info->st_size;
-    ent->timestamp = 0;
+    ent->timestamp = info->st_mtime;
 
     return ent;
 }

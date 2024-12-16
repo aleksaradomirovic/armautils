@@ -7,9 +7,11 @@
 #include "utils.h"
 
 #include <errno.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <utime.h>
 
 static int mkdir_parents(char * dirpath, const char * path) {
     for(char * sep = strchr(dirpath + strlen(path) + 1, SEPARATOR_CHAR); sep != NULL; sep = strchr(sep, SEPARATOR_CHAR)) {
@@ -23,7 +25,7 @@ static int mkdir_parents(char * dirpath, const char * path) {
     return 0;
 }
 
-static int extract_pbo_entry(FILE * pbo, const struct pbo_entry * ent, const char * path) {
+static int extract_pbo_entry(FILE * pbo, const struct pbo_entry * ent, const char * path, bool preserve_timestamp) {
     char dirpath[strlen(path) + strlen(ent->path) + 2];
     strcpy(dirpath, path);
     strcat(dirpath, SEPARATOR_STR);
@@ -49,6 +51,17 @@ static int extract_pbo_entry(FILE * pbo, const struct pbo_entry * ent, const cha
         return -1;
     }
 
+    if(preserve_timestamp) {        
+        struct utimbuf ts = {
+            ent->timestamp,
+            ent->timestamp,
+        };
+
+        if(utime(dirpath, &ts) != 0) {
+            return -1;
+        }
+    }
+
     return 0;
 }
 
@@ -61,7 +74,7 @@ int pbo_extract(FILE * pbo, const char * path, unsigned long flags) {
     for(struct pbo_entry * curr = header; curr != NULL; curr = curr->next) {
         switch(curr->type) {
             case PBO_ENTRY_TYPE_NULL:
-                if(extract_pbo_entry(pbo, curr, path) != 0) {
+                if(extract_pbo_entry(pbo, curr, path, (flags & PBO_TIMESTAMP) != 0) != 0) {
                     int err = errno;
                     free_pbo_header(header);
                     errno = err;

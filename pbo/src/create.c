@@ -29,8 +29,9 @@ static int pack_pbo_entry(struct pbo_entry * ent, FILE * pbo) {
     return 0;
 }
 
-void fix_last_separator(char * path) {
+static void fix_last_separator(char * path) {
     char * lsep = strrchr(path, SEPARATOR_CHAR);
+    if(lsep == NULL) return;
     if(*(lsep+1) == '\0') *lsep = '\0';
 }
 
@@ -69,6 +70,9 @@ int pbo_create(size_t pathc, const char * pathv[], FILE * pbo, unsigned long fla
 
     for(curr = header; curr != NULL; curr = curr->next) {
         curr->data_size = curr->original_size;
+        if(!(flags & PBO_TIMESTAMP)) {
+            curr->timestamp = 0;
+        }
         if(write_pbo_header(curr, pbo) != 0) {
             int err = errno;
             free_pbo_header(header);
@@ -78,12 +82,11 @@ int pbo_create(size_t pathc, const char * pathv[], FILE * pbo, unsigned long fla
     }
 
     {
-        struct pbo_entry null_ent = {
-            .path = "",
-            .type = PBO_ENTRY_TYPE_NULL,
-            .original_size = 0,
-            .data_size = 0,
-        };
+        struct pbo_entry null_ent = { 0 };
+        null_ent.path = "";
+        null_ent.type = PBO_ENTRY_TYPE_NULL;
+        null_ent.original_size = 0;
+        null_ent.data_size = 0;
 
         if(write_pbo_header(&null_ent, pbo) != 0) {
             int err = errno;

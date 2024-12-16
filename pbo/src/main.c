@@ -18,6 +18,7 @@ enum {
 static const char * pbo_name = NULL;
 static int filec;
 static char ** filev;
+static unsigned long flags = 0;
 
 static const struct argp_option args_opts[] = {
     // OPERATING MODES
@@ -29,6 +30,7 @@ static const struct argp_option args_opts[] = {
     // COMMON OPTIONS
     { NULL, 0, NULL, 0, "Common options:\n", 2 },
     { "file", 'f', "PBO", 0, "Specify PBO filename", 0 },
+    { "timestamps", 'T', NULL, 0, "Preserve timestamps", 0 },
 
     { NULL, 0, NULL, 0, "Miscellaneous Options:\n", -1 },
     { 0 }
@@ -47,6 +49,9 @@ static int args_parser(int key, char * arg, struct argp_state *) {
             break;
         case 'f':
             pbo_name = arg;
+            break;
+        case 'T':
+            flags |= PBO_TIMESTAMP;
             break;
         default:
             return ARGP_ERR_UNKNOWN;
@@ -99,7 +104,7 @@ static void mode_extract() {
         error(-1, errno, "Failed to open archive");
     }
 
-    if(pbo_extract(archive, ".", 0) != 0) {
+    if(pbo_extract(archive, ".", flags) != 0) {
         int err = errno;
         fclose(archive);
         error(-1, err, "Failed to extract archive");
@@ -120,7 +125,7 @@ static void mode_create() {
         error(-1, errno, "Failed to open archive");
     }
 
-    if(pbo_create(filec, (const char **) filev, archive, 0) != 0) {
+    if(pbo_create(filec, (const char **) filev, archive, flags) != 0) {
         int err = errno;
         fclose(archive);
         error(-1, err, "Failed to create archive");

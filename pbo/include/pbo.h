@@ -6,6 +6,9 @@
 
 #include <stdio.h>
 
+#define PBO_VERBOSE (1 << 0)
+#define PBO_TIMESTAMP (1 << 1)
+
 int pbo_create(size_t pathc, const char * pathv[], FILE * pbo, unsigned long flags);
 int pbo_extract(FILE * pbo, const char * path, unsigned long flags);
 int pbo_list(FILE * pbo, FILE * print);
