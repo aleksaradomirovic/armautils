@@ -22,6 +22,7 @@
 static enum mode {
     MODE_NULL,
     MODE_LIST,
+    MODE_EXTRACT,
 } mode = MODE_NULL;
 
 static const char *pbo_file_path = NULL;
@@ -29,6 +30,7 @@ static const char *pbo_file_path = NULL;
 static const struct argp_option args_opts[] = {
     { NULL, 0, NULL, 0, "Operating modes:", 1},
     { "list", 't', NULL, 0, "List contents of PBO", 0 },
+    { "extract", 'x', NULL, 0, "Extract contents of PBO", 0 },
 
     { NULL, 0, NULL, 0, "Common options:", 2},
     { "file", 'f', "PBO", 0, "Specify PBO file", 0 },
@@ -48,6 +50,12 @@ static int args_parse(int key, char *arg, struct argp_state *state) {
             }
             mode = MODE_LIST;
             break;
+        case 'x':
+            if(mode != MODE_NULL) {
+                argp_error(state, "mode already specified");
+            }
+            mode = MODE_EXTRACT;
+            break;
 
         case 'f':
             if(pbo_file_path != NULL) {
@@ -63,7 +71,8 @@ static int args_parse(int key, char *arg, struct argp_state *state) {
                     break;
 
                 case MODE_LIST:
-                    argp_error(state, "extra arguments unused by list mode");
+                case MODE_EXTRACT:
+                    argp_error(state, "extra arguments unused by this mode");
                     break;
             }
 
@@ -82,6 +91,17 @@ static int args_parse(int key, char *arg, struct argp_state *state) {
                     status = pbo_mode_list(pbo_file_path);
                     if(status != 0) {
                         argp_failure(state, status, status, "failed to list contents of %s", pbo_file_path);
+                    }
+                    break;
+
+                case MODE_EXTRACT:
+                    if(pbo_file_path == NULL) {
+                        argp_error(state, "pbo file not specified");
+                    }
+                
+                    status = pbo_mode_extract(pbo_file_path);
+                    if(status != 0) {
+                        argp_failure(state, status, status, "failed to extract contents of %s", pbo_file_path);
                     }
                     break;
             }

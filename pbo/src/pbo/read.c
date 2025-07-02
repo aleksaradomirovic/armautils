@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "pbofile.h"
 
@@ -79,7 +80,7 @@ static int pbo_load_properties(struct pbo *pbo, FILE *file) {
 
     struct pbo_property **prop_ptr = &pbo->properties;
     while(1) {
-        struct pbo_property *prop;
+        struct pbo_property *prop = NULL;
         status = pbo_property_init(&prop);
         if(status != 0) {
             return status;
@@ -158,7 +159,7 @@ static int pbo_load_entries(struct pbo *pbo, FILE *file) {
 
     struct pbo_entry **ent_ptr = &pbo->entries;
     while(1) {
-        struct pbo_entry *ent;
+        struct pbo_entry *ent = NULL;
         status = pbo_entry_init(&ent);
         if(status != 0) {
             return status;
@@ -238,4 +239,90 @@ int pbo_load(struct pbo *pbo, FILE *file) {
     }
 
     return 0;
+}
+
+static int fcopy(FILE *in, FILE *out, long len) {
+    if(len < 0) {
+        return EINVAL;
+    }
+
+    long total = 0;
+    char iobuf[BUFSIZ];
+    while(total < len) {
+        long maxrlen = len - total;
+        size_t rlen = maxrlen > BUFSIZ ? BUFSIZ : maxrlen;
+        rlen = fread(iobuf, 1, rlen, in);
+        if(rlen == 0) {
+            return EIO;
+        }
+
+        size_t wlen = fwrite(iobuf, 1, rlen, out);
+        if(wlen < rlen) {
+            return EIO;
+        }
+
+        total += wlen;
+    }
+
+    return 0;
+}
+
+static int pbo_entry_extract_regular(struct pbo_entry *ent, FILE *pbofile) {
+    int status;
+
+    char pathbuf[PATH_MAX];
+    if(stpncpy(pathbuf, ent->path, PATH_MAX) >= (pathbuf + PATH_MAX)) {
+        return ENAMETOOLONG;
+    }
+
+    for(char *sep = strstr(pathbuf, PBO_PATH_SEPARATOR); sep != NULL; sep = strstr(++sep, PBO_PATH_SEPARATOR)) {
+        *sep = '\0';
+
+        struct stat dirinfo;
+        if(stat(pathbuf, &dirinfo) != 0) {
+            if(errno == ENOENT) {
+                if(mkdir(pathbuf, 00777) != 0) {
+                    return errno;
+                }
+            } else {
+                return errno;
+            }
+        } else if(!S_ISDIR(dirinfo.st_mode)) {
+            return ENOTDIR;
+        }
+
+        memcpy(sep, "/", strlen("/"));
+    }
+
+    FILE *outfile = fopen(pathbuf, "w");
+    if(outfile == NULL) {
+        return errno;
+    }
+
+    if(fseek(pbofile, ent->offset, SEEK_SET) != 0) {
+        status = errno;
+        fclose(outfile);
+        return status;
+    }
+
+    status = fcopy(pbofile, outfile, ent->data_size);
+    if(status != 0) {
+        fclose(outfile);
+        return status;
+    }
+
+    if(fclose(outfile) != 0) {
+        return errno;
+    }
+
+    return 0;
+}
+
+int pbo_entry_extract(struct pbo_entry *ent, FILE *pbofile) {
+    switch(ent->type) {
+        case PBO_ENTRY_NULL:
+            return pbo_entry_extract_regular(ent, pbofile);
+        default:
+            return ENOTSUP;
+    }
 }

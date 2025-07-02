@@ -15,13 +15,11 @@
  */
 
 #include <errno.h>
-#include <limits.h>
-#include <string.h>
 
 #include "mode.h"
 #include "../pbo.h"
 
-int pbo_mode_list(const char *path) {
+int pbo_mode_extract(const char *path) {
     int status;
 
     struct pbo *pbo = NULL;
@@ -45,7 +43,12 @@ int pbo_mode_list(const char *path) {
     }
 
     for(PBO_ENTRY *ent = pbo_get_entries(pbo); ent != NULL; ent = pbo_entry_next(ent)) {
-        fprintf(stdout, "%s\n", pbo_entry_path(ent));
+        status = pbo_entry_extract(ent, file);
+        if(status != 0) {
+            fclose(file);
+            pbo_destroy(pbo);
+            return status;
+        }
     }
 
     if(fclose(file) != 0) {

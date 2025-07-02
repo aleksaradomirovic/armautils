@@ -17,3 +17,5 @@
 #pragma once
 
 int pbo_mode_list(const char *path);
+
+int pbo_mode_extract(const char *path);

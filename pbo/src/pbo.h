@@ -38,5 +38,7 @@ PBO_PROPERTY * pbo_property_next(PBO_PROPERTY *prop);
 const char * pbo_entry_path(PBO_ENTRY *ent);
 PBO_ENTRY * pbo_entry_next(PBO_ENTRY *ent);
 
+int pbo_entry_extract(PBO_ENTRY *ent, FILE *pbofile);
+
 PBO_ENTRY * pbo_get_entries(PBO *pbo);
 PBO_PROPERTY * pbo_get_properties(PBO *pbo);

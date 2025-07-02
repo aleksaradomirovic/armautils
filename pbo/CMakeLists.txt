@@ -14,6 +14,7 @@
 
 add_executable(
     pbo
+        src/mode/extract.c
         src/mode/list.c
 
         src/pbo/pbo.c
